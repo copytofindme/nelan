@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Video</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #video-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      pointer-events: none;
+      -webkit-media-controls: none;
+    }
+
+    video::-webkit-media-controls {
+      display: none !important;
+    }
+
+    video::-webkit-media-controls-enclosure {
+      display: none !important;
+    }
+
+    video::-webkit-media-controls-panel {
+      display: none !important;
+    }
+
+    /* Полностью блокируем взаимодействие с видео через оверлей */
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      background: transparent;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    #btn-container {
+      position: absolute;
+      bottom: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.8s ease;
+    }
+
+    #btn-container.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #lan-btn {
+      display: inline-block;
+      background: #0088cc;
+      color: #fff;
+      font-size: clamp(1.2rem, 5vw, 1.8rem);
+      font-weight: 700;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      text-decoration: none;
+      padding: clamp(14px, 4vw, 22px) clamp(48px, 14vw, 100px);
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 4px 20px rgba(0, 136, 204, 0.5);
+      -webkit-tap-highlight-color: transparent;
+      letter-spacing: 0.02em;
+    }
+
+    #lan-btn:active {
+      background: #006fa3;
+      transform: scale(0.97);
+    }
+  </style>
+</head>
+<body>
+  <div id="video-container">
+    <video
+      id="vid"
+      src="video.mp4"
+      playsinline
+      webkit-playsinline
+      preload="auto"
+      muted
+    ></video>
+    <div id="overlay"></div>
+    <div id="btn-container">
+      <a id="lan-btn" href="https://t.me/+ce7fl6Glt09jOTIy">Лан</a>
+    </div>
+  </div>
+
+  <script>
+    const vid = document.getElementById('vid');
+    const btnContainer = document.getElementById('btn-container');
+
+    let playCount = 0;
+
+    // Пытаемся включить звук и запустить видео
+    function tryPlay() {
+      vid.muted = false;
+      vid.volume = 1.0;
+      vid.play().catch(() => {
+        // Если браузер заблокировал автовоспроизведение со звуком — запускаем без звука
+        vid.muted = true;
+        vid.play().then(() => {
+          // После первого воспроизведения пробуем снова включить звук
+          vid.muted = false;
+          vid.volume = 1.0;
+        });
+      });
+    }
+
+    vid.addEventListener('ended', () => {
+      playCount++;
+      if (playCount < 2) {
+        vid.currentTime = 0;
+        vid.play();
+      } else {
+        btnContainer.classList.add('visible');
+      }
+    });
+
+    // Запрещаем контекстное меню (долгое нажатие на мобильном)
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    // Запускаем воспроизведение
+    tryPlay();
+
+    // Дополнительно — попытка включить звук при первом касании
+    document.addEventListener('touchstart', () => {
+      vid.muted = false;
+      vid.volume = 1.0;
+    }, { once: true });
+  </script>
+</body>
+</html>
