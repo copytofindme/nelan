@@ -91,6 +91,7 @@
       letter-spacing: 0.04em;
       cursor: pointer;
       border: none;
+      touch-action: manipulation;
     }
     .tg-btn svg {
       width: clamp(22px, 6vw, 28px);
@@ -102,13 +103,15 @@
 </head>
 <body>
 
-  <video id="vid" src="video.mp4" preload="auto" playsinline webkit-playsinline disablepictureinpicture></video>
+  <video id="vid" preload="auto" playsinline webkit-playsinline disablepictureinpicture>
+    <source src="video.mp4" type="video/mp4">
+  </video>
 
   <div id="overlay"></div>
 
   <!-- Стартовый экран: кнопка ПОСТЫ -->
   <div id="start-screen">
-    <button class="tg-btn" id="posts-btn">
+    <button type="button" class="tg-btn" id="posts-btn">
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path d="M21.93 3.24L18.42 19.65C18.17 20.77 17.5 21.05 16.56 20.52L11.56 16.87L9.15 19.18C8.88 19.45 8.65 19.67 8.12 19.67L8.48 14.57L17.81 6.17C18.22 5.81 17.72 5.61 17.17 5.97L5.67 13.18L0.74 11.63C-0.36 11.28 -0.38 10.54 0.98 9.99L20.49 2.06C21.41 1.72 22.21 2.28 21.93 3.24Z" fill="white"/>
       </svg>
@@ -120,41 +123,49 @@
   <a id="lan-btn" href="https://t.me/+ce7fl6Glt09jOTIy">Лан</a>
 
   <script>
-    const vid        = document.getElementById('vid');
+    const vid         = document.getElementById('vid');
     const startScreen = document.getElementById('start-screen');
-    const postsBtn   = document.getElementById('posts-btn');
-    const lanBtn     = document.getElementById('lan-btn');
+    const postsBtn    = document.getElementById('posts-btn');
+    const lanBtn      = document.getElementById('lan-btn');
     let count = 0;
+    let isStarted = false;
 
-    // Нажатие ПОСТЫ → запускаем видео со звуком
     function launchVideo() {
-      vid.volume = 1.0;
+      if (isStarted) return;
+      isStarted = true;
+
+      // Сразу убираем стартовый экран при клике
+      startScreen.classList.add('gone');
+
       vid.muted  = false;
-      vid.play().then(() => {
-        startScreen.classList.add('gone');
-      }).catch(() => {
-        vid.muted = true;
-        vid.play().then(() => {
-          vid.muted  = false;
-          vid.volume = 1.0;
-          startScreen.classList.add('gone');
+      vid.volume = 1.0;
+
+      const playPromise = vid.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // Если браузер всё равно заблокировал звук, запускаем без звука,
+          // а звук включим при любом следующем касании экрана
+          vid.muted = true;
+          vid.play();
+          document.addEventListener('click', () => {
+            vid.muted = false;
+            vid.volume = 1.0;
+          }, { once: true });
         });
-      });
+      }
     }
 
-    postsBtn.addEventListener('click',      launchVideo, { once: true });
-    postsBtn.addEventListener('touchstart', launchVideo, { once: true, passive: true });
+    // Используем только click — он гарантированно разблокирует звук на телефонах
+    postsBtn.addEventListener('click', launchVideo);
 
     // После каждого окончания видео
     vid.addEventListener('ended', () => {
       count++;
-      // Видео продолжает крутиться бесконечно
-      vid.currentTime = 0;
-      vid.play();
-      // После 2-го просмотра показываем кнопку «Лан»
       if (count >= 2) {
         lanBtn.classList.add('show');
       }
+      vid.currentTime = 0;
+      vid.play().catch(() => {});
     });
 
     document.addEventListener('contextmenu', e => e.preventDefault());
@@ -162,3 +173,4 @@
 
 </body>
 </html>
+
