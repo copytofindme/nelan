@@ -15,10 +15,15 @@
       width:100%; height:100%;
       object-fit: contain;
       pointer-events: none;
+      -webkit-touch-callout: none;
     }
     video::-webkit-media-controls,
     video::-webkit-media-controls-enclosure,
-    video::-webkit-media-controls-panel { display:none !important; }
+    video::-webkit-media-controls-panel,
+    video::-webkit-media-controls-start-playback-button {
+      display: none !important;
+      -webkit-appearance: none;
+    }
 
     /* ─── Блокирующий оверлей (мешает паузить) ─── */
     #overlay {
@@ -106,7 +111,16 @@
 </head>
 <body>
 
-  <video id="vid" src="video.mp4" preload="auto" playsinline webkit-playsinline disablepictureinpicture></video>
+  <video
+    id="vid"
+    src="video.mp4"
+    preload="auto"
+    playsinline
+    webkit-playsinline
+    x5-playsinline
+    disablepictureinpicture
+    controlslist="nodownload nofullscreen noremoteplayback"
+  ></video>
 
   <div id="overlay"></div>
 
@@ -124,37 +138,65 @@
   <a id="lan-btn" href="https://t.me/+ce7fl6Glt09jOTIy">Лан</a>
 
   <script>
-    const vid        = document.getElementById('vid');
+    const vid         = document.getElementById('vid');
     const startScreen = document.getElementById('start-screen');
-    const postsBtn   = document.getElementById('posts-btn');
-    const lanBtn     = document.getElementById('lan-btn');
+    const postsBtn    = document.getElementById('posts-btn');
+    const lanBtn      = document.getElementById('lan-btn');
     let count = 0;
+    let started = false;
 
-    // Нажатие ПОСТЫ → запускаем видео со звуком
-    function launchVideo() {
+    // Предзагрузка для iOS Safari
+    vid.load();
+
+    // Нажатие ПОСТЫ → запускаем видео
+    function launchVideo(e) {
+      if (started) return;
+      started = true;
+      if (e && e.cancelable) {
+        e.preventDefault();
+      }
+
       vid.volume = 1.0;
       vid.muted  = false;
-      vid.play().then(() => {
-        startScreen.classList.add('gone');
-      }).catch(() => {
-        vid.muted = true;
-        vid.play().then(() => {
-          vid.muted  = false;
-          vid.volume = 1.0;
+
+      const p = vid.play();
+      if (p !== undefined) {
+        p.then(() => {
           startScreen.classList.add('gone');
+        }).catch(err => {
+          console.warn("Unmuted playback blocked on mobile, falling back to muted:", err);
+          vid.muted = true;
+          vid.play().then(() => {
+            startScreen.classList.add('gone');
+            // Пробуем включить звук при следующем касании
+            const enableSound = () => {
+              vid.muted = false;
+              vid.volume = 1.0;
+              document.removeEventListener('touchend', enableSound);
+              document.removeEventListener('click', enableSound);
+            };
+            document.addEventListener('touchend', enableSound);
+            document.addEventListener('click', enableSound);
+          }).catch(err2 => {
+            console.error("Playback failed completely:", err2);
+          });
         });
-      });
+      }
     }
 
-    postsBtn.addEventListener('click',      launchVideo, { once: true });
-    postsBtn.addEventListener('touchstart', launchVideo, { once: true, passive: true });
+    // В iOS Safari touchend дает полные привилегии пользовательского жеста
+    postsBtn.addEventListener('touchend', launchVideo);
+    postsBtn.addEventListener('click', launchVideo);
 
     // После каждого окончания видео
     vid.addEventListener('ended', () => {
       count++;
       // Видео продолжает крутиться бесконечно
       vid.currentTime = 0;
-      vid.play();
+      const p = vid.play();
+      if (p !== undefined) {
+        p.catch(() => {});
+      }
       // После 2-го просмотра показываем кнопку «Лан»
       if (count >= 2) {
         lanBtn.classList.add('show');
