@@ -39,12 +39,12 @@
     }
     #start-screen.gone { display: none; }
 
-    /* ─── Кнопка «Лан» — изначально скрыта снизу ─── */
+    /* ─── Кнопка «Лан» — появляется по центру видео ─── */
     #lan-btn {
       position: fixed;
-      bottom: 10%;
+      top: 50%;
       left: 50%;
-      transform: translateX(-50%) translateY(140px);
+      transform: translate(-50%, calc(-50% + 50px)) scale(0.85);
       z-index: 200;
       opacity: 0;
       pointer-events: none;
@@ -55,47 +55,50 @@
       justify-content: center;
       background: #0088cc;
       color: #fff;
-      font-size: clamp(1.2rem, 5vw, 1.8rem);
+      font-size: clamp(1.6rem, 7vw, 2.4rem);
       font-weight: 800;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       text-decoration: none;
-      padding: clamp(14px, 4vw, 20px) clamp(40px, 12vw, 80px);
-      border-radius: 50px;
+      padding: clamp(20px, 5.5vw, 28px) clamp(50px, 15vw, 110px);
+      border-radius: 60px;
       white-space: nowrap;
-      box-shadow: 0 6px 30px rgba(0,136,204,0.65);
+      box-shadow: 0 8px 36px rgba(0,136,204,0.75);
       -webkit-tap-highlight-color: transparent;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.04em;
     }
     #lan-btn.show {
       opacity: 1;
       pointer-events: auto;
-      transform: translateX(-50%) translateY(0);
+      transform: translate(-50%, -50%) scale(1);
+    }
+    #lan-btn:active {
+      filter: brightness(0.88);
+      transform: translate(-50%, -50%) scale(0.97);
     }
 
     /* ─── Общие стили кнопок ─── */
     .tg-btn {
       display: inline-flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
       background: #0088cc;
       color: #fff;
-      font-size: clamp(1.1rem, 4.5vw, 1.6rem);
+      font-size: clamp(1.3rem, 5.5vw, 1.8rem);
       font-weight: 800;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       text-decoration: none;
-      padding: clamp(16px, 4.5vw, 22px) clamp(36px, 11vw, 80px);
-      border-radius: 50px;
+      padding: clamp(18px, 5vw, 26px) clamp(42px, 12vw, 90px);
+      border-radius: 60px;
       white-space: nowrap;
-      box-shadow: 0 6px 28px rgba(0,136,204,0.6);
+      box-shadow: 0 6px 30px rgba(0,136,204,0.65);
       -webkit-tap-highlight-color: transparent;
       letter-spacing: 0.04em;
       cursor: pointer;
       border: none;
-      touch-action: manipulation;
     }
     .tg-btn svg {
-      width: clamp(22px, 6vw, 28px);
-      height: clamp(22px, 6vw, 28px);
+      width: clamp(26px, 7vw, 32px);
+      height: clamp(26px, 7vw, 32px);
       flex-shrink: 0;
     }
     .tg-btn:active { filter: brightness(0.88); }
@@ -103,15 +106,13 @@
 </head>
 <body>
 
-  <video id="vid" preload="auto" playsinline webkit-playsinline disablepictureinpicture>
-    <source src="video.mp4" type="video/mp4">
-  </video>
+  <video id="vid" src="video.mp4" preload="auto" playsinline webkit-playsinline disablepictureinpicture></video>
 
   <div id="overlay"></div>
 
   <!-- Стартовый экран: кнопка ПОСТЫ -->
   <div id="start-screen">
-    <button type="button" class="tg-btn" id="posts-btn">
+    <button class="tg-btn" id="posts-btn">
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path d="M21.93 3.24L18.42 19.65C18.17 20.77 17.5 21.05 16.56 20.52L11.56 16.87L9.15 19.18C8.88 19.45 8.65 19.67 8.12 19.67L8.48 14.57L17.81 6.17C18.22 5.81 17.72 5.61 17.17 5.97L5.67 13.18L0.74 11.63C-0.36 11.28 -0.38 10.54 0.98 9.99L20.49 2.06C21.41 1.72 22.21 2.28 21.93 3.24Z" fill="white"/>
       </svg>
@@ -123,49 +124,41 @@
   <a id="lan-btn" href="https://t.me/+ce7fl6Glt09jOTIy">Лан</a>
 
   <script>
-    const vid         = document.getElementById('vid');
+    const vid        = document.getElementById('vid');
     const startScreen = document.getElementById('start-screen');
-    const postsBtn    = document.getElementById('posts-btn');
-    const lanBtn      = document.getElementById('lan-btn');
+    const postsBtn   = document.getElementById('posts-btn');
+    const lanBtn     = document.getElementById('lan-btn');
     let count = 0;
-    let isStarted = false;
 
+    // Нажатие ПОСТЫ → запускаем видео со звуком
     function launchVideo() {
-      if (isStarted) return;
-      isStarted = true;
-
-      // Сразу убираем стартовый экран при клике
-      startScreen.classList.add('gone');
-
-      vid.muted  = false;
       vid.volume = 1.0;
-
-      const playPromise = vid.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // Если браузер всё равно заблокировал звук, запускаем без звука,
-          // а звук включим при любом следующем касании экрана
-          vid.muted = true;
-          vid.play();
-          document.addEventListener('click', () => {
-            vid.muted = false;
-            vid.volume = 1.0;
-          }, { once: true });
+      vid.muted  = false;
+      vid.play().then(() => {
+        startScreen.classList.add('gone');
+      }).catch(() => {
+        vid.muted = true;
+        vid.play().then(() => {
+          vid.muted  = false;
+          vid.volume = 1.0;
+          startScreen.classList.add('gone');
         });
-      }
+      });
     }
 
-    // Используем только click — он гарантированно разблокирует звук на телефонах
-    postsBtn.addEventListener('click', launchVideo);
+    postsBtn.addEventListener('click',      launchVideo, { once: true });
+    postsBtn.addEventListener('touchstart', launchVideo, { once: true, passive: true });
 
     // После каждого окончания видео
     vid.addEventListener('ended', () => {
       count++;
+      // Видео продолжает крутиться бесконечно
+      vid.currentTime = 0;
+      vid.play();
+      // После 2-го просмотра показываем кнопку «Лан»
       if (count >= 2) {
         lanBtn.classList.add('show');
       }
-      vid.currentTime = 0;
-      vid.play().catch(() => {});
     });
 
     document.addEventListener('contextmenu', e => e.preventDefault());
@@ -173,4 +166,3 @@
 
 </body>
 </html>
-
